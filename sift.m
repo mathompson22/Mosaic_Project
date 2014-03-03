@@ -20,7 +20,7 @@ function [image, descriptors, locs] = sift(img)
 
 % Load image
 %image = imread(imageFile);
-image = img;
+image = rgb2gray(img);
 
 % If you have the Image Processing Toolbox, you can uncomment the following
 %   lines to allow input of color images, which will be converted to grayscale.
