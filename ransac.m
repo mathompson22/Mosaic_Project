@@ -5,7 +5,7 @@ function [ homography, matches ] = ransac( image1, image2 )
 
 %The number of keypoints to randomly select with SIFT
 numRandPoints = 4;
-numIterations = 150;
+numIterations = 200;
 
 % Find SIFT keypoints for each image
 [im1, des1, loc1] = sift(image1);
@@ -18,6 +18,16 @@ showkeys(im2,loc2);
 maxX = maxX + 3;
 maxY = maxY + 3;
 
+% construct a kd-tree for the points of interest (POI) in image 2
+poi2 = zeros(size(loc2,1),2);
+for i=1:size(loc2,1)
+    poi2(i,1) = loc2(i,2); % X or column
+    poi2(i,2) = loc2(i,1); % Y or row
+end
+
+kdTreeObj = KDTreeSearcher(poi2,'distance','euclidean');
+
+% initialize the function return variables for tracking progress
 homography = [];
 matches = [];
 topMatchCount = -1;
@@ -30,6 +40,7 @@ for j=1:numIterations
     myMatches = [];
     
 
+    % start solving for a new homography hypothesis
     A = zeros(3*numRandPoints,8);
     b = zeros(3*numRandPoints,1);
     usedPoints1 = zeros(numRandPoints);
@@ -78,7 +89,10 @@ for j=1:numIterations
     x = A\b;
     nextHomo = vec2mat(x,3,1);
     
+    poi1 = [];
+    orig = [];
     
+    % transform the POI in image 1 using the homography hypothesis
     for i=1:size(loc1)
         
         %if we didn't use this point for the homography
@@ -87,26 +101,43 @@ for j=1:numIterations
             p1 = [loc1(i,2); loc1(i,1); 1];
             p1 = nextHomo*p1;
             
-            %find the closest matching point in the second image
-            bestMatch = -1;
-            bestMatchVal = -1;
-            if and(and(and(p1(1)>=-3, p1(2)>=-3),p1(1)<=maxX),p1(2)<=maxY)
-                for k=1:size(loc2)
-                    if (~ismember(k,usedPoints2))
-                        dist = (p1(1)-loc2(k,2))^2 + (p1(2)-loc2(k,1))^2;
-                        if (dist <=4)
-                            bestMatchVal = dist;
-                            bestMatch = k;
-                            break;
-                        end
-                    end
-                end
-
-                if (bestMatch >= 0)
-                    myMatches = [myMatches; i bestMatch];
-                    matchCount = matchCount + 1;
-                end
-            end
+            poi1 = [poi1; p1(1) p1(2)];
+            orig = [orig; loc1(i,2) loc1(i,1)];
+            
+%             %find the closest matching point in the second image
+%             bestMatch = -1;
+%             bestMatchVal = -1;
+%             if and(and(and(p1(1)>=-3, p1(2)>=-3),p1(1)<=maxX),p1(2)<=maxY)
+%                 for k=1:size(loc2)
+%                     if (~ismember(k,usedPoints2))
+%                         dist = (p1(1)-loc2(k,2))^2 + (p1(2)-loc2(k,1))^2;
+%                         if (dist <=4)
+%                             bestMatchVal = dist;
+%                             bestMatch = k;
+%                             break;
+%                         end
+%                     end
+%                 end
+% 
+%                 if (bestMatch >= 0)
+%                     myMatches = [myMatches; i bestMatch];
+%                     matchCount = matchCount + 1;
+%                 end
+%             end
+        end
+    end
+    
+    
+    % do the k-nearest-neighbor search for each transformed point to the
+    % second image
+    [n, d] = knnsearch(kdTreeObj,poi1);
+    
+    hasBeenUsed = zeros(size(poi2,1));
+    for i=1:size(d,1)
+        if (and(d(i)<=2,hasBeenUsed(n(i))==0))
+            matchCount = matchCount + 1;
+            myMatches = [myMatches; orig(i,:) poi2(n(i),:)];
+            hasBeenUsed(n(i)) = 1;
         end
     end
     
@@ -120,7 +151,7 @@ for j=1:numIterations
 end
 
 % Create a new image showing the two images side by side.
-im3 = appendimages(im1,im2);
+ im3 = appendimages(im1,im2);
 
 % Show a figure with lines joining the accepted matches.
 figure('Position', [100 100 size(im3,2) size(im3,1)]);
@@ -129,10 +160,12 @@ imagesc(im3);
 hold on;
 cols1 = size(im1,2);
 for i = 1: size(matches,1)
-  if (matches(i) > 0)
-    line([loc1(matches(i,1),2) loc2(matches(i,2),2)+cols1], ...
-         [loc1(matches(i,1),1) loc2(matches(i,2),1)], 'Color', 'c');
-  end
+    line([matches(i,1) (matches(i,3)+cols1)], ...
+          [matches(i,2) matches(i,4)], 'Color', 'c');
+%   if (matches(i) > 0)
+%     line([loc1(matches(i,1),2) loc2(matches(i,2),2)+cols1], ...
+%          [loc1(matches(i,1),1) loc2(matches(i,2),1)], 'Color', 'c');
+%   end
 end
 hold off;
 

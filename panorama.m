@@ -2,8 +2,8 @@ function panImg = panorama( imagepath, f, k1, k2 )
 % Process input imagepath
 %files = dir(imagepath);
 %imagelist = files(3:end);
-Ia = imread('testingImages\100NIKON-DSCN0008_DSCN0008.JPG');
-Ib = imread('testingImages\100NIKON-DSCN0009_DSCN0009.JPG');
+Ia = imread('Dinosaur_small\DSC03622.JPG');
+Ib = imread('Dinosaur_small\DSC03623.JPG');
 
 %convert each image into cylindrical coordinates
 cyla = cylindricalProjection( Ia, f, k1, k2 );
