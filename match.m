@@ -21,7 +21,7 @@ function [num, match, loc1, loc2] = match(image1, image2)
 %
 % distRatio: Only keep matches in which the ratio of vector angles from the
 %   nearest to second nearest neighbor is less than distRatio.
-distRatio = 0.6;   
+distRatio = 0.8;   
 
 % For each descriptor in the first image, select its match to second image.
 des2t = des2';                          % Precompute matrix transpose

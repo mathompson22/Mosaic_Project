@@ -5,7 +5,7 @@ function [ homography, matches ] = ransac( image1, image2 )
 
 %The number of keypoints to randomly select with SIFT
 numRandPoints = 4;
-numIterations = 200;
+numIterations = 1000;
 
 % Find SIFT keypoints for each image
 [im1, des1, loc1] = sift(image1);
@@ -57,15 +57,16 @@ for j=1:numIterations
         %set values for the A matrix
         p1r = loc1(nextRand,1);
         p1c = loc1(nextRand,2);
+        
 
-        A(k,1) = p1c;
-        A(k,2) = p1r;
-        A(k,3) = 1;
-        A(k+1,4) = p1c;
-        A(k+1,5) = p1r;
-        A(k+1,6) = 1;
-        A(k+2,7) = p1c;
-        A(k+2,8) = p1r;
+%         A(k,1) = p1c;
+%         A(k,2) = p1r;
+%         A(k,3) = 1;
+%         A(k+1,4) = p1c;
+%         A(k+1,5) = p1r;
+%         A(k+1,6) = 1;
+%         A(k+2,7) = p1c;
+%         A(k+2,8) = p1r;
 
         %select a random point from image 2 that hasn't been used yet
         nextRand = randi(size(loc2,1));
@@ -78,10 +79,16 @@ for j=1:numIterations
         p2r = loc2(nextRand,1);
         p2c = loc2(nextRand,2);
 
+%         b(k,1) = p2c;
+%         b(k+1,1) = p2r;
+
+        A(k,:) = [p1c p1r 1 0 0 0 (-p2c*p1c) (-p2c*p1r)];
         b(k,1) = p2c;
+        
+        A(k+1,:) = [0 0 0 p1c p1r 1 (-p2r*p1c) (-p2r*p1r)];
         b(k+1,1) = p2r;
 
-        k = k + 3;
+        k = k + 2;
 
     end
 
