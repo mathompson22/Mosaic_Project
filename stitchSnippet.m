@@ -1,22 +1,3 @@
-function output = panoramaOrig(imagepath)
-% Process input imagepath
-files = dir(imagepath);
-imagelist = files(1:end);
-
-for i=1:length(imagelist)-1
-    image1 = imagelist(i).name;
-    image2 = imagelist(i+1).name;
-    
-    % Find matching feature points between current two images using SIFT
-    [~, matchIndex, loc1, loc2] = match(image1, image2);
-    im1_ftr_pts = loc1(find(matchIndex > 0), 1 : 2);
-    im2_ftr_pts = loc2(matchIndex(find(matchIndex > 0)), 1 : 2);
-
-    % Calculate 3x3 homography matrix, H, mapping coordinates in image2 into coordinates in image1
-    H = calcH(im1_ftr_pts, im2_ftr_pts);
-    H_list(i) = {H};
-end
-
 % Select one input image as the reference image (first image)
 new_H = eye(3);
 H_map(1) = {new_H};
@@ -33,7 +14,8 @@ min_col = 1;
 max_row = 0;
 max_col = 0;
 
-% for each input image
+
+% Determine the dimensions of the panorama
 for i=1:length(imagelist)
     cur_image = imread(imagelist(i).name);
     [rows,cols,~] = size(cur_image);
@@ -43,10 +25,16 @@ for i=1:length(imagelist)
     
     % Map each of the 4 corner's coordinates into the coordinate system of the reference image
     for j=1:4
+        %apply the homography to see how the corners will be affected
+        %Note: H_map is a map of composed homographies
         result = H_map{i}*pt_matrix(:,:,j);
     
+        %This determines the four corners of the panorama
+        %Choose the minimum between your current row and the warped row
+        %whichever is lowest, set that to the new minimum
         min_row = floor(min(min_row, result(1)));
         min_col = floor(min(min_col, result(2)));
+        %similar logic applies to the max 
         max_row = ceil(max(max_row, result(1)));
         max_col = ceil(max(max_col, result(2))); 
     end
@@ -63,15 +51,13 @@ col_offset = 1 - min_col;
 
 % Initialize output image to black (0)
 pan_image = zeros(im_rows, im_cols, 3);
-
-
 output = zeros(im_rows, im_cols, 3);
 
 % Perform inverse mapping for each input image
-for i=1:length(H_map)
+for i=1:length(imagelist)
+    %reads in unaltered image
     cur_image = im2double(imread(imagelist(i).name));
 
-    
     % Create a list of all pixels' coordinates in output image
     [x,y] = meshgrid(1:im_cols, 1:im_rows);
     % Create list of all row coordinates and column coordinates in separate vectors, x and y, including offset
@@ -143,5 +129,3 @@ for i=1:length(H_map)
 end
 output = im2uint8(output);
 imwrite(output,'panorama.jpg','jpg');
-end
-
