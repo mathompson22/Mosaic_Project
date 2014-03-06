@@ -3,9 +3,10 @@
 
 function [ homography, matches ] = ransac( image1, image2 )
 
+
 %The number of keypoints to randomly select with SIFT
 numRandPoints = 4;
-numIterations = 1000;
+numIterations = 10;
 
 % Find SIFT keypoints for each image
 [im1, des1, loc1] = sift(image1);
