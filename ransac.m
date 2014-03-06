@@ -1,181 +1,144 @@
+function [ finalHomography, finalMatches ] = ransac( f1, d1, f2, d2 )
 
 
+    numRandPoints = 4;
+    numIterations = 5000;
 
-function [ homography, matches ] = ransac( image1, image2 )
+    %im1Gray = image1;%single(rgb2gray(image1));
+    %im2Gray = image2;%single(rgb2gray(image2));
 
+    % f has the format [x;y;s;th], where each column is a keypoint
+    %[f1, d1] = vl_sift(im1Gray);
+    %[f2, d2] = vl_sift(im2Gray);
 
-%The number of keypoints to randomly select with SIFT
-numRandPoints = 4;
-numIterations = 10;
-
-% Find SIFT keypoints for each image
-[im1, des1, loc1] = sift(image1);
-[im2, des2, loc2] = sift(image2);
-showkeys(im1,loc1);
-showkeys(im2,loc2);
-% disp(loc1);
-
-[maxY, maxX] = size(im2);
-maxX = maxX + 3;
-maxY = maxY + 3;
-
-% construct a kd-tree for the points of interest (POI) in image 2
-poi2 = zeros(size(loc2,1),2);
-for i=1:size(loc2,1)
-    poi2(i,1) = loc2(i,2); % X or column
-    poi2(i,2) = loc2(i,1); % Y or row
-end
-
-kdTreeObj = KDTreeSearcher(poi2,'distance','euclidean');
-
-% initialize the function return variables for tracking progress
-homography = [];
-matches = [];
-topMatchCount = -1;
-
-for j=1:numIterations
-
-    mess = sprintf('Iteration %d',j);
-    disp(mess);
-    matchCount = 0;
-    myMatches = [];
+    % matches stores in the format [i1; i2], where each column is the index in
+    % image1 and image2 descriptors
+    % scores are a euclidian distance between the two
+    [matches, scores] = vl_ubcmatch(d1, d2);
     
+    finalHomography = [];
+    finalMatches = [];
+    topInlierCount = -1;
 
-    % start solving for a new homography hypothesis
-    A = zeros(3*numRandPoints,8);
-    b = zeros(3*numRandPoints,1);
-    usedPoints1 = zeros(numRandPoints);
-    usedPoints2 = zeros(numRandPoints);
-    k = 1;
-    for i=1:numRandPoints
-        %select a random point from image 1 that hasn't been used yet
-        nextRand = randi(size(loc1,1));
-        while (ismember(nextRand,usedPoints1))
-            nextRand = randi(size(loc1,1));
+    for i=1:numIterations
+
+        mess = sprintf('Iteration %d',i);
+        %disp(mess);
+        
+        % start solving for a new homography hypothesis
+        A = zeros(2*numRandPoints,8);
+        b = zeros(2*numRandPoints,1);
+        usedMatches = zeros(numRandPoints);
+        k = 1;
+        for j=1:numRandPoints
+            nextRand = randi(size(matches,2));
+            while (ismember(nextRand,usedMatches))
+                nextRand = randi(size(matches,2));
+            end
+            usedMatches(j) = nextRand;
+
+            p1r = f1(2,matches(1,nextRand));
+            p1c = f1(1,matches(1,nextRand));
+
+            p2r = f2(2,matches(2,nextRand));
+            p2c = f2(1,matches(2,nextRand));
+
+            A(k,:) = [p1c p1r 1 0 0 0 (-p2c*p1c) (-p2c*p1r)];
+            b(k,1) = p2c;
+
+            A(k+1,:) = [0 0 0 p1c p1r 1 (-p2r*p1c) (-p2r*p1r)];
+            b(k+1,1) = p2r;
+
+            k = k + 2;
         end
-        usedPoints1(i) = nextRand;
         
-        %set values for the A matrix
-        p1r = loc1(nextRand,1);
-        p1c = loc1(nextRand,2);
+        %solve for the variables in the homography
+        x = A\b;
+        homo = vec2mat(x,3,1);
         
-
-%         A(k,1) = p1c;
-%         A(k,2) = p1r;
-%         A(k,3) = 1;
-%         A(k+1,4) = p1c;
-%         A(k+1,5) = p1r;
-%         A(k+1,6) = 1;
-%         A(k+2,7) = p1c;
-%         A(k+2,8) = p1r;
-
-        %select a random point from image 2 that hasn't been used yet
-        nextRand = randi(size(loc2,1));
-        while (ismember(nextRand,usedPoints2))
-            nextRand = randi(size(loc2,1));
+        
+        inlierCount = 0;
+        inliers = [];
+        for j=1:size(matches,2)
+            p1 = [f1(1,matches(1,j)); f1(2,matches(1,j)); 1];
+            p1 = homo*p1;
+            
+            p2 = [f2(1,matches(2,j)); f2(2,matches(2,j)); 1];
+            
+            if ( ((p1(1)-p2(1))^2 + (p1(2)-p2(2))^2) <= 4)
+                inlierCount = inlierCount + 1;
+                inliers = [inliers; matches(1,j) matches(2,j)];
+            end
         end
-        usedPoints2(i) = nextRand;
         
-        %set values for the b matrix
-        p2r = loc2(nextRand,1);
-        p2c = loc2(nextRand,2);
-
-%         b(k,1) = p2c;
-%         b(k+1,1) = p2r;
-
-        A(k,:) = [p1c p1r 1 0 0 0 (-p2c*p1c) (-p2c*p1r)];
-        b(k,1) = p2c;
+        if (inlierCount > topInlierCount)
+            finalMatches = inliers;
+            topInlierCount = inlierCount;
+            finalHomography = homo;
+        end
         
-        A(k+1,:) = [0 0 0 p1c p1r 1 (-p2r*p1c) (-p2r*p1r)];
-        b(k+1,1) = p2r;
-
-        k = k + 2;
-
-    end
-
-    %solve for the variables in the homography
-    x = A\b;
-    nextHomo = vec2mat(x,3,1);
+    end %for i=1:numIterations
     
-    poi1 = [];
-    orig = [];
+%     disp('Best homography estimate:');
+%     disp(finalHomography);
     
-    % transform the POI in image 1 using the homography hypothesis
-    for i=1:size(loc1)
-        
-        %if we didn't use this point for the homography
-        if (~ismember(i,usedPoints1))
-            %find the adjusted point location
-            p1 = [loc1(i,2); loc1(i,1); 1];
-            p1 = nextHomo*p1;
-            
-            poi1 = [poi1; p1(1) p1(2)];
-            orig = [orig; loc1(i,2) loc1(i,1)];
-            
-%             %find the closest matching point in the second image
-%             bestMatch = -1;
-%             bestMatchVal = -1;
-%             if and(and(and(p1(1)>=-3, p1(2)>=-3),p1(1)<=maxX),p1(2)<=maxY)
-%                 for k=1:size(loc2)
-%                     if (~ismember(k,usedPoints2))
-%                         dist = (p1(1)-loc2(k,2))^2 + (p1(2)-loc2(k,1))^2;
-%                         if (dist <=4)
-%                             bestMatchVal = dist;
-%                             bestMatch = k;
-%                             break;
-%                         end
-%                     end
-%                 end
+    % start solving for the final homography
+%     A = zeros(2*size(finalMatches,1),8);
+%     b = zeros(2*size(finalMatches,1),1);
+%     k = 1;
+%     for j=1:size(finalMatches,1)
 % 
-%                 if (bestMatch >= 0)
-%                     myMatches = [myMatches; i bestMatch];
-%                     matchCount = matchCount + 1;
-%                 end
-%             end
-        end
-    end
+%         p1r = f1(2,finalMatches(j,1));
+%         p1c = f1(1,finalMatches(j,1));
+% 
+%         p2r = f2(2,finalMatches(j,2));
+%         p2c = f2(1,finalMatches(j,2));
+% 
+%         A(k,:) = [p1c p1r 1 0 0 0 (-p2c*p1c) (-p2c*p1r)];
+%         b(k,1) = p2c;
+% 
+%         A(k+1,:) = [0 0 0 p1c p1r 1 (-p2r*p1c) (-p2r*p1r)];
+%         b(k+1,1) = p2r;
+% 
+%         k = k + 2;
+%     end
+% 
+%     %solve for the variables in the homography
+%     x = A\b;
+%     finalHomography = vec2mat(x,3,1);
+    
+%     disp('Final homography estimate:');
+%     disp(finalHomography);
     
     
-    % do the k-nearest-neighbor search for each transformed point to the
-    % second image
-    [n, d] = knnsearch(kdTreeObj,poi1);
+    %some testing code
+%     inlierCount = 0;
+%     inliers = [];
+%     for j=1:size(matches,2)
+%         p1 = [f1(1,matches(1,j)); f1(2,matches(1,j)); 1];
+%         p1 = finalHomography*p1;
+% 
+%         p2 = [f2(1,matches(2,j)); f2(2,matches(2,j)); 1];
+% 
+%         if ( ((p1(1)-p2(1))^2 + (p1(2)-p2(2))^2) <= 4)
+%             inlierCount = inlierCount + 1;
+%             inliers = [inliers; matches(1,j) matches(2,j)];
+%         end
+%     end
+%     disp('Final Inlier count:');
+%     disp(inlierCount);
     
-    hasBeenUsed = zeros(size(poi2,1));
-    for i=1:size(d,1)
-        if (and(d(i)<=2,hasBeenUsed(n(i))==0))
-            matchCount = matchCount + 1;
-            myMatches = [myMatches; orig(i,:) poi2(n(i),:)];
-            hasBeenUsed(n(i)) = 1;
-        end
-    end
-    
-    
-    if (matchCount > topMatchCount)
-        matches = myMatches
-        topMatchCount = matchCount
-        homography = nextHomo
-    end
-
-end
-
-% Create a new image showing the two images side by side.
- im3 = appendimages(im1,im2);
-
-% Show a figure with lines joining the accepted matches.
-figure('Position', [100 100 size(im3,2) size(im3,1)]);
-colormap('gray');
-imagesc(im3);
-hold on;
-cols1 = size(im1,2);
-for i = 1: size(matches,1)
-    line([matches(i,1) (matches(i,3)+cols1)], ...
-          [matches(i,2) matches(i,4)], 'Color', 'c');
-%   if (matches(i) > 0)
-%     line([loc1(matches(i,1),2) loc2(matches(i,2),2)+cols1], ...
-%          [loc1(matches(i,1),1) loc2(matches(i,2),1)], 'Color', 'c');
-%   end
-end
-hold off;
+%     im3 = appendimages(image1,image2);
+%     figure('Position', [100 100 size(im3,2) size(im3,1)]);
+%     colormap('gray');
+%     imagesc(im3);
+%     hold on;
+%     cols1 = size(image1,2);
+%     for i = 1: size(finalMatches,1)
+%         line([f1(1,finalMatches(i,1)) (f2(1,finalMatches(i,2))+cols1)], ...
+%             [f1(2,finalMatches(i,1)) f2(2,finalMatches(i,2))], 'Color', 'c');
+%     end
+%     hold off;
 
 end
 
