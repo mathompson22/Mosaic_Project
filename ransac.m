@@ -79,6 +79,10 @@ function [ finalHomography, finalMatches ] = ransac( f1, d1, f2, d2 )
         
     end %for i=1:numIterations
     
+    % NOTE: Stuff below this line was supposed to calculate a new final
+    % homography using all the inlier points. However, the homography it
+    % was calculating was kind of crap, so we disabled it for now and just
+    % went with the best homography that was found earlier.
 %     disp('Best homography estimate:');
 %     disp(finalHomography);
     

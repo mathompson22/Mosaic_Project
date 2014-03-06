@@ -1,9 +1,4 @@
 function panImg = panorama( imagepath, f, k1, k2 )
-% Process input imagepath
-%files = dir(imagepath);
-%imagelist = files(3:end);
-% Ia = imread('Dinosaur_small\DSC03622.JPG');
-% Ib = imread('Dinosaur_small\DSC03623.JPG');
 
 %load in all the images
 %    \o
@@ -28,6 +23,7 @@ for i=1:length(images)
 end
 
 
+%Compute the SIFT features in every image
 disp('Getting SIFT information from images.');
 grayImages = {};
 siftFeatures = {};
@@ -39,6 +35,7 @@ for i=1:length(cylImages)
     siftDescriptors{i} = d;
 end
 
+%use ransac to calculate the homographies in each image
 disp('Calculating homographies');
 homographies = {};
 for i=1:length(grayImages)
@@ -56,13 +53,7 @@ for i=1:length(grayImages)
     homographies{i} = homo;
 end
 
-% The vl_sift command requires a single precision gray scale image. 
-% It also expects the range to be normalized in the [0,255] interval
 
-%[homography, matches] = ransac(grayImages{1}, grayImages{2});
-
-%[~, matchIndex, loc1, loc2] = match(cyla, cylb);
-%[~, matchIndex, loc1, loc2] = match(Ia, Ib);
 
 panImg = images{1};
 
