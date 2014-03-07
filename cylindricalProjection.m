@@ -1,4 +1,4 @@
-function cylImg = cylindricalProjectionOrig( img, f, k1, k2 )
+function [ cylImg, cylMask ] = cylindricalProjectionOrig( img, f, k1, k2 )
 width = size(img,2);
 height = size(img,1);
 
@@ -35,6 +35,8 @@ for y=1:height
             cylImg(y, x, 1) = uint8(img(yCylImg, xCylImg, 1));
             cylImg(y, x, 2) = uint8(img(yCylImg, xCylImg, 2));
             cylImg(y, x, 3) = uint8(img(yCylImg, xCylImg, 3));
+            
+            cylMask(y,x) = 1;
         end
     end
 end

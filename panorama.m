@@ -18,8 +18,11 @@ end
 % map each image to a cylinder
 disp('Mapping images to cylinder');
 cylImages = {};
+cylMasks = {};
 for i=1:length(images)
-    cylImages{i} = cylindricalProjection(images{i}, f, k1, k2);
+    [cylIm cylM] = cylindricalProjection(images{i}, f, k1, k2);
+    cylImages{i} = cylIm;
+    cylMasks{i} = cylM;
 end
 
 
@@ -53,7 +56,7 @@ for i=1:length(grayImages)
     homographies{i} = homo;
 end
 
-panImg = stitchImages(cylImages,homographies);
+panImg = stitchImages(cylImages, cylMasks, homographies);
 
 
 end
