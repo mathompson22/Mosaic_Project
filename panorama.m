@@ -53,9 +53,8 @@ for i=1:length(grayImages)
     homographies{i} = homo;
 end
 
+panImg = stitchImages(cylImages,homographies);
 
-
-panImg = images{1};
 
 end
 
