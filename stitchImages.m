@@ -89,7 +89,8 @@ function [ finalImage ] = stitchImages( images, imageMasks, homographies )
             end
         end
         
-        
+        %tempImg = im2uint8(pan_image);
+        %imshow(tempImg);
     end
     
     [pan_image ~] = cropAndAlign(pan_image, pan_mask, ...
@@ -207,7 +208,7 @@ function [ croppedImg, croppedMask ] = cropAndAlign( panImg, panMask, ...
     for x=1:size(crop1,2)
         for y=1:size(crop1,1)
             if (crop1Mask(y,x) > 0 )
-                yPrime = y + floor(a*x);
+                yPrime = y - floor(a*x);
                 shiftedImg(yPrime-y_adj,x,:) = crop1(y,x,:);
                 shiftedMask(yPrime-y_adj,x) = 1;
             end
