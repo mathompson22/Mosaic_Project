@@ -9,4 +9,6 @@ maska = zeros(size(imga));
 maska(:,1:v,:) = 1;
 maskb = 1-maska;
 
-pyramidBlend(imga, imgb, maska, maskb, 5);
+a = .375;       %MATLAB value, acceptable ranges .3-.6
+blendedImg = pyramidBlend(imga, imgb, maska, maskb, 5, a);
+figure,imshow(blendedImg);

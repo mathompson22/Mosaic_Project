@@ -1,16 +1,22 @@
-function  pyr = generatePyramid( img, level )
+function  pyr = generatePyramid( img, level, a )
 pyr = cell(1,level);
 pyr{1} = img;
 
+%create pyramid
 for p = 2:level
-	pyr{p} = impyramid(pyr{p-1}, 'reduce');
+    pyr{p} = reduceTier(pyr{p-1}, a);
+    
 end
 
+%expanded tier loses dimensions to we must compensate for that
+for p = level-1:-1:1
+	expandedTierSize = 2*size(pyr{p+1})-1;
+	pyr{p} = pyr{p}(1:expandedTierSize(1),1:expandedTierSize(2),:);
+end
+
+%finalize pyramid
 for p = 1:level-1
-    sz = size(pyr{p});
-    pyrExp = impyramid(pyr{p+1}, 'expand');
-    pyrExp = imresize(pyrExp, [sz(1), sz(2)]);
-	pyr{p} = pyr{p}-pyrExp;
+	pyr{p} = pyr{p}-expandTier(pyr{p+1}, a);
 end
 
 end
