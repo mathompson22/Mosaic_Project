@@ -76,22 +76,7 @@ function [ finalImage ] = stitchImages( images, imageMasks, homographies )
             bar = 18;
         end
         [cur_image, cur_mask] = expandImage( im2double(images{i}), imageMasks{i}, H_map{i}, im_rows, im_cols, row_offset, col_offset );
-        
-         %NOTE: Perform the blending here instead of just overlaying the
-        %       images.
-%         for x=1:im_cols
-%             for y=1:im_rows
-%                 if (cur_mask(y,x) > 0)
-%                     if (pan_mask(y,x) >0)
-%                         pan_image(y,x,:) = 0.5*pan_image(y,x,:) + 0.5*cur_image(y,x,:);
-%                     else
-%                         pan_mask(y,x) = 1;
-%                         pan_image(y,x,:) = cur_image(y,x,:);
-%                     end
-%                 end
-%             end
-%         end
-        
+               
         tmpMask = zeros(size(pan_mask, 1), size(pan_mask, 2), 3);   
         tmpMask(:,:,1) = pan_mask(:,:);
         tmpMask(:,:,2) = pan_mask(:,:);
@@ -101,10 +86,7 @@ function [ finalImage ] = stitchImages( images, imageMasks, homographies )
         tmpMask0(:,:,1) = cur_mask(:,:);
         tmpMask0(:,:,2) = cur_mask(:,:);
         tmpMask0(:,:,3) = cur_mask(:,:);
-        
-        %figure, imshow (tmpMask);
-        %figure, imshow (tmpMask0);
-        
+              
         compMask = tmpMask+tmpMask0;
         overlapMask = tmpMask & tmpMask0;
         diffMask = xor(compMask, overlapMask);
@@ -112,34 +94,18 @@ function [ finalImage ] = stitchImages( images, imageMasks, homographies )
         pan_image = pan_image.*diffMask;
         overlap_image = cur_image.*overlapMask;
 
-%         tmpMask1 = zeros(size(diffMask, 1), size(diffMask, 2), 3);   
-%         tmpMask1(:,:,1) = diffMask(:,:);
-%         tmpMask1(:,:,2) = diffMask(:,:);
-%         tmpMask1(:,:,3) = diffMask(:,:);
-% 
-%         tmpMask2 = zeros(size(overlapMask, 1), size(overlapMask, 2), 3);   
-%         tmpMask2(:,:,1) = overlapMask(:,:);
-%         tmpMask2(:,:,2) = overlapMask(:,:);
-%         tmpMask2(:,:,3) = overlapMask(:,:);
-
-        %figure, imshow (pan_image);
-        %figure, imshow (overlap_image);
         blendedImg = pyramidBlend(pan_image, overlap_image, diffMask, overlapMask, 5, 3.75);
-        figure, imshow (blendedImg);
         
         pan_image = blendedImg;
         %quick hack to compensate for shrinkage in blending
         pan_image = imresize(pan_image, [size(cur_image, 1) size(cur_image, 2)]);
         pan_mask = compMask(:,:,1);
-        %tempImg = im2uint8(pan_image);
-        %imshow(tempImg);
     end
     
     [pan_image ~] = cropAndAlign(pan_image, pan_mask, ...
         images{1}, imageMasks{1}, H_map{1}, ...
         images{length(images)}, imageMasks{length(imageMasks)}, H_map{length(H_map)}, ...
         row_offset, col_offset, endHomography);
-    figure, imshow (blendedImg);
     finalImage = im2uint8(pan_image);
     imwrite(finalImage,'panorama.jpg','jpg');
     
