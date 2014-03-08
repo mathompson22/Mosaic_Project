@@ -2,7 +2,7 @@ function [ finalHomography, finalMatches ] = ransac( f1, d1, f2, d2 )
 
 
     numRandPoints = 4;
-    numIterations = 5000;
+    numIterations = 500;
 
     %im1Gray = image1;%single(rgb2gray(image1));
     %im2Gray = image2;%single(rgb2gray(image2));

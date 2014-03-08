@@ -72,6 +72,9 @@ function [ finalImage ] = stitchImages( images, imageMasks, homographies )
     for i=2:length(images)
         mess = sprintf('Stitching Image %d',i);
         disp(mess);
+        if (i == 18)
+            bar = 18;
+        end
         [cur_image, cur_mask] = expandImage( im2double(images{i}), imageMasks{i}, H_map{i}, im_rows, im_cols, row_offset, col_offset );
         
         %NOTE: Perform the blending here instead of just overlaying the
@@ -108,8 +111,9 @@ function [ expandedImage, imageMask ] = expandImage ( sIm, sImMask, homography, 
     expandedImage = zeros(rows, cols, 3);
     imageMask = zeros(rows,cols);
     
-    imgCols = size(sIm,1);
-    imgRows = size(sIm,2);
+    [imgRows,imgCols,~] = size(sIm);
+    %imgCols = size(sIm,1);
+    %imgRows = size(sIm,2);
     
     
     pt_matrix = cat(3, [1,1,1]', [imgCols,1,1]', [1, imgRows,1]', [imgCols,imgRows,1]');
