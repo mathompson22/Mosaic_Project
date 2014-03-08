@@ -1,9 +1,9 @@
 function imgOut = expandTier( img, a )
  kernelwidth = 5; 
-% sigma = 1;
-% kernel = fspecial('gauss',kernelwidth,sigma)*4; 
-kern = [.25-(a/2) .25 a .25 .25-(a/2)];
-kernel = 4*(kern'*kern);
+sigma = 1;
+kernel = fspecial('gauss',kernelwidth,sigma)*4; 
+% kern = [.25-(a/2) .25 a .25 .25-(a/2)];
+% kernel = 4*(kern'*kern);
 
 % Note: "Only terms for which i-m/2 j-n/2 are integers are included in the
 % sum" According to Burt et. al

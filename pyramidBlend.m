@@ -6,9 +6,13 @@ img2 =  im2double(img2);
 %verify that images are the same size?
 
 %feather masks
-gKernel = fspecial('gauss',30,15); 
+gKernel = fspecial('gauss',30,15); %original value
+%gKernel = fspecial('gauss',10,5); 
 mask1 = imfilter(mask1,gKernel,'replicate');
 mask2 = imfilter(mask2,gKernel,'replicate');
+
+%figure, imshow(mask1);
+%figure, imshow(mask2);
 
 %create pyramids
 lapPyr1 = generatePyramid(img1,level, a); % the Laplacian pyramid
